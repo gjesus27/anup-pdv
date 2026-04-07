@@ -33,14 +33,28 @@ export default function Login() {
 
   // Check if admin exists
   useEffect(() => {
-    supabase.functions.invoke("manage-users", {
-      body: { action: "check_has_admin" },
-    }).then(({ data }) => {
-      if (data && !data.has_admin) {
-        navigate("/setup", { replace: true });
+    const checkAdmin = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("manage-users", {
+          body: { action: "check_has_admin" },
+        });
+
+        if (error) throw error;
+
+        if (data && !data.has_admin) {
+          navigate("/setup", { replace: true });
+        }
+
+        setHasAdmin(data?.has_admin ?? false);
+      } catch (err) {
+        console.error("Erro ao verificar admin:", err);
+
+        // fallback pra não quebrar tela
+        setHasAdmin(true);
       }
-      setHasAdmin(data?.has_admin ?? false);
-    });
+    };
+
+    checkAdmin();
   }, [navigate]);
 
   // If already fully set up, go to dashboard
@@ -57,21 +71,42 @@ export default function Login() {
     }
   }, [session]);
 
+  // 🔹 Função loadCompanies corrigida
   const loadCompanies = async () => {
     setLoadingCompanies(true);
+
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+
+    // 👑 Corrigido: pegar role do app_metadata
+    const role = user?.app_metadata?.role;
+    const companyId = user?.user_metadata?.company_id;
+
     const { data } = await supabase.functions.invoke("manage-users", {
       body: { action: "list_companies" },
     });
+
     const list: Company[] = data?.companies || [];
     setCompanies(list);
     setLoadingCompanies(false);
 
-    if (list.length === 1 && !isAnupAdmin) {
-      // Auto-select the only company
-      handleSelectCompany(list[0]);
-    } else {
+    // 👑 ADMIN ANUP
+    if (role === "anup_admin") {
       setStep("select_company");
+      return;
     }
+
+    // 🏢 EMPRESA
+    if (companyId) {
+      const company = list.find((c) => c.id === companyId);
+      if (company) {
+        handleSelectCompany(company);
+        return;
+      }
+    }
+
+    // fallback
+    setStep("select_company");
   };
 
   const handleSelectCompany = async (company: Company) => {
@@ -124,7 +159,13 @@ export default function Login() {
   const getInitials = (name: string) =>
     name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
-  if (hasAdmin === null) return null;
+  if (hasAdmin === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-primary">
+        <Loader2 className="h-6 w-6 animate-spin text-primary-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-primary flex flex-col overflow-hidden relative">
