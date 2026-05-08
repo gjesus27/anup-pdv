@@ -23,6 +23,11 @@ create table if not exists public.companies (
   created_at timestamptz not null default now()
 );
 
+alter table public.companies add column if not exists document text;
+alter table public.companies add column if not exists logo_url text;
+alter table public.companies add column if not exists primary_color text default '#1E3A8A';
+alter table public.companies add column if not exists secondary_color text default '#10B981';
+
 create table if not exists public.company_members (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies(id) on delete cascade,
@@ -73,6 +78,13 @@ create table if not exists public.products (
   created_at timestamptz not null default now()
 );
 
+alter table public.products add column if not exists company_id uuid references public.companies(id) on delete cascade;
+alter table public.products add column if not exists category text;
+alter table public.products add column if not exists sku text;
+alter table public.products add column if not exists barcode text;
+alter table public.products add column if not exists stock_quantity numeric(12,3) not null default 0;
+alter table public.products add column if not exists min_stock_quantity numeric(12,3) not null default 0;
+
 create table if not exists public.customers (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies(id) on delete cascade,
@@ -99,6 +111,15 @@ create table if not exists public.orders (
   created_at timestamptz not null default now()
 );
 
+alter table public.orders add column if not exists company_id uuid references public.companies(id) on delete cascade;
+alter table public.orders add column if not exists customer_id uuid references public.customers(id) on delete set null;
+alter table public.orders add column if not exists channel text not null default 'pos';
+alter table public.orders add column if not exists subtotal numeric(12,2) not null default 0;
+alter table public.orders add column if not exists discount numeric(12,2) not null default 0;
+alter table public.orders add column if not exists total numeric(12,2) not null default 0;
+alter table public.orders add column if not exists notes text;
+alter table public.orders add column if not exists created_by uuid references auth.users(id);
+
 create table if not exists public.order_items (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies(id) on delete cascade,
@@ -109,6 +130,11 @@ create table if not exists public.order_items (
   unit_price numeric(12,2) not null default 0,
   total numeric(12,2) not null default 0
 );
+
+alter table public.order_items add column if not exists company_id uuid references public.companies(id) on delete cascade;
+alter table public.order_items add column if not exists name text;
+alter table public.order_items add column if not exists unit_price numeric(12,2) not null default 0;
+alter table public.order_items add column if not exists total numeric(12,2) not null default 0;
 
 create table if not exists public.order_payments (
   id uuid primary key default gen_random_uuid(),
@@ -162,7 +188,13 @@ language sql
 security definer
 stable
 as $$
-  select coalesce((auth.jwt() -> 'app_metadata' ->> 'role') = 'anup_admin', false);
+  select coalesce((auth.jwt() -> 'app_metadata' ->> 'role') = 'anup_admin', false)
+    or exists (
+      select 1
+      from public.user_roles ur
+      where ur.user_id = auth.uid()
+        and ur.role = 'admin'::public.app_role
+    );
 $$;
 
 create or replace function public.has_company_access(target_company_id uuid)
@@ -178,6 +210,13 @@ as $$
       where cm.company_id = target_company_id
         and cm.user_id = auth.uid()
         and cm.status = 'active'
+    )
+    or exists (
+      select 1
+      from public.company_users cu
+      where cu.company_id = target_company_id
+        and cu.user_id = auth.uid()
+        and cu.status = 'active'
     );
 $$;
 
@@ -195,6 +234,15 @@ as $$
         and cm.user_id = auth.uid()
         and cm.role in ('admin', 'manager')
         and cm.status = 'active'
+    )
+    or exists (
+      select 1
+      from public.company_users cu
+      join public.user_roles ur on ur.user_id = cu.user_id
+      where cu.company_id = target_company_id
+        and cu.user_id = auth.uid()
+        and cu.status = 'active'
+        and ur.role in ('admin'::public.app_role, 'manager'::public.app_role)
     );
 $$;
 
