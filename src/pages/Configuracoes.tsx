@@ -1,69 +1,73 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Save, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-import { User, CreditCard } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { PageHeader, ModuleCard } from "@/components/product/ProductPrimitives";
+import { settingsGroups } from "@/data/saas";
+
+const paymentOptions = ["Dinheiro", "PIX", "Crédito", "Débito", "Vale", "Múltiplos pagamentos"];
 
 export default function Configuracoes() {
-  const [name, setName] = useState("Arthur Menezes");
-  const [email, setEmail] = useState("arthur@anup.com.br");
-  const [payments, setPayments] = useState({
-    pix: true, dinheiro: true, debito: true, credito: true, cashback: false, ticket: false,
-  });
-
-  const handleSave = () => toast.success("✅ Perfil atualizado com sucesso!");
-
-  const togglePayment = (key: string) => {
-    setPayments(p => ({ ...p, [key]: !p[key as keyof typeof p] }));
-    toast.success("✅ Forma de pagamento atualizada!");
-  };
-
   return (
     <div>
-      <header className="mb-10">
-        <h2 className="text-2xl font-semibold text-primary">Configurações</h2>
-        <p className="text-muted-foreground text-sm mt-1">Gerencie seu perfil e preferências do sistema.</p>
-      </header>
+      <PageHeader
+        eyebrow="Admin empresa"
+        title="Configurações"
+        description="Central de parametrização da empresa: identidade visual, PDV, delivery, impressão, usuários, permissões e assinatura."
+        action={
+          <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+            <Save className="mr-2 h-4 w-4" />
+            Salvar alterações
+          </Button>
+        }
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Profile */}
-        <Card className="shadow-md border-none">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <User className="h-5 w-5" /> Perfil
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-xl">
-                AM
-              </div>
-              <Button variant="outline" size="sm">Trocar Foto</Button>
+      <div className="mb-6 grid gap-4 lg:grid-cols-3">
+        {settingsGroups.map((group) => (
+          <ModuleCard key={group.title} {...group} />
+        ))}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+        <Card className="border-none shadow-sm">
+          <CardContent className="space-y-4 p-5">
+            <h2 className="font-bold text-primary">Empresa e marca</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input defaultValue="Açaí do Rapha" placeholder="Nome fantasia" />
+              <Input defaultValue="Anup Cliente LTDA" placeholder="Razão social" />
             </div>
-            <Input placeholder="Nome" value={name} onChange={e => setName(e.target.value)} />
-            <Input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} type="email" />
-            <Input placeholder="Senha atual" type="password" />
-            <Input placeholder="Nova senha" type="password" />
-            <Button onClick={handleSave} className="bg-secondary hover:bg-secondary/90 text-secondary-foreground">Atualizar Perfil</Button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input defaultValue="#1E3A8A" placeholder="Cor primária" />
+              <Input defaultValue="#10B981" placeholder="Cor secundária" />
+            </div>
+            <Button variant="outline">
+              <UploadCloud className="mr-2 h-4 w-4" />
+              Enviar logo para Cloudinary
+            </Button>
           </CardContent>
         </Card>
 
-        {/* Payment Methods */}
-        <Card className="shadow-md border-none">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <CreditCard className="h-5 w-5" /> Formas de Pagamento
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {Object.entries(payments).map(([key, val]) => (
-              <label key={key} className="flex items-center gap-3 cursor-pointer">
-                <Checkbox checked={val} onCheckedChange={() => togglePayment(key)} />
-                <span className="capitalize font-medium">{key === "credito" ? "Crédito" : key === "debito" ? "Débito" : key.charAt(0).toUpperCase() + key.slice(1)}</span>
-              </label>
-            ))}
+        <Card className="border-none shadow-sm">
+          <CardContent className="space-y-4 p-5">
+            <h2 className="font-bold text-primary">PDV e pagamentos</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {paymentOptions.map((option) => (
+                <label key={option} className="flex items-center gap-3 rounded-lg bg-surface-container-low p-3">
+                  <Checkbox defaultChecked />
+                  <span className="text-sm font-medium">{option}</span>
+                </label>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input defaultValue="10" placeholder="Desconto máximo (%)" />
+              <Input defaultValue="3" placeholder="Cashback padrão (%)" />
+            </div>
+            <label className="flex items-center justify-between rounded-lg border p-4">
+              <span className="font-medium">Troco automático</span>
+              <Switch defaultChecked />
+            </label>
           </CardContent>
         </Card>
       </div>

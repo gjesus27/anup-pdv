@@ -1,32 +1,42 @@
 import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard,
+  Armchair,
+  BadgeDollarSign,
+  BarChart,
+  Building2,
   DollarSign,
-  Users,
+  FileText,
+  Headphones,
+  LayoutDashboard,
+  LogOut,
   Package,
+  Settings,
   ShoppingCart,
   Truck,
-  BarChart,
-  Settings,
-  FileText,
-  LogOut,
-  Building2,
+  Users,
+  Utensils,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-const menuItems = [
+export const companyMenuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "PDV", url: "/pdv", icon: Utensils },
   { title: "Caixa", url: "/caixa", icon: DollarSign },
+  { title: "Comandas", url: "/comandas", icon: Armchair },
   { title: "Usuários", url: "/usuarios", icon: Users },
   { title: "Estoque", url: "/estoque", icon: Package },
-  { title: "Pedidos Delivery", url: "/pedidos", icon: ShoppingCart },
+  { title: "Delivery", url: "/pedidos", icon: ShoppingCart },
   { title: "Entregadores", url: "/entregadores", icon: Truck },
+  { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Financeiro", url: "/financeiro", icon: BarChart },
+  { title: "Assinatura", url: "/assinatura", icon: BadgeDollarSign },
+  { title: "Suporte", url: "/suporte", icon: Headphones },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
   { title: "Histórico", url: "/historico", icon: FileText },
 ];
 
 const adminOnlyItems = [
+  { title: "Anup Admin", url: "/anup", icon: Building2 },
   { title: "Empresas", url: "/empresas", icon: Building2 },
 ];
 
@@ -43,85 +53,85 @@ export function AppSidebar() {
     delivery_person: "Entregador",
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-  };
-
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-primary flex flex-col p-4 gap-2 z-50">
-      <div className="mb-4 px-2 flex flex-col gap-1">
-        <h1 className="text-xl font-bold text-primary-foreground tracking-tight">Anup</h1>
-        <p className="text-[10px] uppercase tracking-widest text-primary-foreground/50 font-semibold">Sistema PDV</p>
+    <aside className="fixed left-0 top-0 z-50 hidden h-screen w-64 flex-col gap-2 bg-primary p-4 md:flex">
+      <div className="mb-4 px-2">
+        <h1 className="text-xl font-bold tracking-tight text-primary-foreground">Anup PDV Cloud</h1>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-foreground/50">
+          SaaS multiempresa
+        </p>
       </div>
 
       {selectedCompany && (
-        <div className="mb-4 px-3 py-2 bg-primary-foreground/5 rounded-xl flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-secondary shrink-0" />
-          <span className="text-primary-foreground text-xs font-bold truncate">
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-primary-foreground/5 px-3 py-2">
+          <Building2 className="h-4 w-4 shrink-0 text-secondary" />
+          <span className="truncate text-xs font-bold text-primary-foreground">
             {selectedCompany.trade_name || selectedCompany.name}
           </span>
           {isAnupAdmin && (
             <button
               onClick={clearCompanySelection}
-              className="text-primary-foreground/40 hover:text-primary-foreground text-[10px] ml-auto shrink-0"
+              className="ml-auto shrink-0 text-[10px] text-primary-foreground/50 hover:text-primary-foreground"
               title="Trocar empresa"
             >
-              ✕
+              x
             </button>
           )}
         </div>
       )}
 
-      <nav className="flex-1 flex flex-col gap-1">
-        {menuItems.map((item) => (
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto pr-1">
+        {isAnupAdmin &&
+          adminOnlyItems.map((item) => (
+            <NavLink
+              key={item.url}
+              to={item.url}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition ${
+                  isActive
+                    ? "bg-primary-foreground/15 font-semibold text-primary-foreground"
+                    : "text-primary-foreground/70 hover:bg-primary-foreground/5 hover:text-primary-foreground"
+                }`
+              }
+            >
+              <item.icon className="h-5 w-5" />
+              <span>{item.title}</span>
+            </NavLink>
+          ))}
+
+        {companyMenuItems.map((item) => (
           <NavLink
             key={item.url}
             to={item.url}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm ${
+              `flex items-center gap-3 rounded-lg px-4 py-3 text-sm transition ${
                 isActive
-                  ? "bg-primary-foreground/15 text-primary-foreground font-semibold"
-                  : "text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/5"
+                  ? "bg-primary-foreground/15 font-semibold text-primary-foreground"
+                  : "text-primary-foreground/70 hover:bg-primary-foreground/5 hover:text-primary-foreground"
               }`
             }
           >
             <item.icon className="h-5 w-5" />
-            <span className="tracking-tight">{item.title}</span>
-          </NavLink>
-        ))}
-        {isAnupAdmin && adminOnlyItems.map((item) => (
-          <NavLink
-            key={item.url}
-            to={item.url}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm ${
-                isActive
-                  ? "bg-primary-foreground/15 text-primary-foreground font-semibold"
-                  : "text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/5"
-              }`
-            }
-          >
-            <item.icon className="h-5 w-5" />
-            <span className="tracking-tight">{item.title}</span>
+            <span>{item.title}</span>
           </NavLink>
         ))}
       </nav>
 
-      <div className="mt-auto p-4 bg-primary-foreground/5 rounded-2xl flex items-center gap-3">
+      <div className="mt-auto flex items-center gap-3 rounded-lg bg-primary-foreground/5 p-4">
         {selectedEmployee?.photo_url ? (
-          <img src={selectedEmployee.photo_url} alt={selectedEmployee.name} className="w-10 h-10 rounded-full object-cover" />
+          <img src={selectedEmployee.photo_url} alt={selectedEmployee.name} className="h-10 w-10 rounded-full object-cover" />
         ) : (
-          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-sm">
-            {selectedEmployee ? getInitials(selectedEmployee.name) : "?"}
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground">
+            {selectedEmployee ? getInitials(selectedEmployee.name) : "AN"}
           </div>
         )}
-        <div className="overflow-hidden flex-1">
-          <p className="text-primary-foreground text-xs font-bold truncate">{selectedEmployee?.name || "..."}</p>
-          <p className="text-primary-foreground/50 text-[10px] truncate">
-            {selectedEmployee?.role ? roleLabels[selectedEmployee.role] : ""}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-bold text-primary-foreground">{selectedEmployee?.name || "Operador"}</p>
+          <p className="truncate text-[10px] text-primary-foreground/50">
+            {selectedEmployee?.role ? roleLabels[selectedEmployee.role] : "Sessão ativa"}
           </p>
         </div>
-        <button onClick={handleSignOut} className="text-primary-foreground/50 hover:text-primary-foreground transition-colors">
+        <button onClick={signOut} className="text-primary-foreground/50 transition hover:text-primary-foreground">
           <LogOut className="h-4 w-4" />
         </button>
       </div>
