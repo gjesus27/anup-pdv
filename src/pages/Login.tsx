@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,9 @@ export default function Login() {
   const [empPassword, setEmpPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
 
+  const metadataRole = session?.user?.app_metadata?.role;
+  const sessionIsAnupAdmin = metadataRole === "anup_admin" || isAnupAdmin;
+
   // Check if admin exists
   useEffect(() => {
     const checkAdmin = async () => {
@@ -57,22 +60,40 @@ export default function Login() {
     checkAdmin();
   }, [navigate]);
 
+  // Anup admins do not need company/employee selection.
+  useEffect(() => {
+    if (sessionIsAnupAdmin) {
+      console.log("[Anup Login] super admin detected", {
+        email: session?.user?.email,
+        metadataRole,
+        isAnupAdmin,
+        target: "/anup/dashboard",
+      });
+      navigate("/anup/dashboard", { replace: true });
+    }
+  }, [sessionIsAnupAdmin, session?.user?.email, metadataRole, isAnupAdmin, navigate]);
+
   // If already fully set up, go to dashboard
   useEffect(() => {
-    if (session && selectedCompany && selectedEmployee) {
+    if (session && !sessionIsAnupAdmin && selectedCompany && selectedEmployee) {
       navigate("/dashboard", { replace: true });
     }
-  }, [session, selectedCompany, selectedEmployee, navigate]);
+  }, [session, sessionIsAnupAdmin, selectedCompany, selectedEmployee, navigate]);
 
-  // After login, advance to company selection
-  useEffect(() => {
-    if (session && step === "credentials") {
-      loadCompanies();
-    }
-  }, [session]);
+  const handleSelectCompany = useCallback(async (company: Company) => {
+    selectCompany(company);
+    setLoadingEmployees(true);
+    setStep("select_employee");
 
-  // 🔹 Função loadCompanies corrigida
-  const loadCompanies = async () => {
+    const { data } = await supabase.functions.invoke("manage-users", {
+      body: { action: "list_employees", company_id: company.id },
+    });
+    setEmployees(data?.employees || []);
+    setLoadingEmployees(false);
+  }, [selectCompany]);
+
+  // Resolves tenant access for regular company users only.
+  const loadCompanies = useCallback(async () => {
     setLoadingCompanies(true);
 
     const { data: userData } = await supabase.auth.getUser();
@@ -82,6 +103,19 @@ export default function Login() {
     const role = user?.app_metadata?.role;
     const companyId = user?.user_metadata?.company_id;
 
+    console.log("[Anup Login] resolving user type", {
+      email: user?.email,
+      metadataRole: role,
+      companyId,
+      isAnupAdmin: role === "anup_admin",
+    });
+
+    if (role === "anup_admin") {
+      setLoadingCompanies(false);
+      navigate("/anup/dashboard", { replace: true });
+      return;
+    }
+
     const { data } = await supabase.functions.invoke("manage-users", {
       body: { action: "list_companies" },
     });
@@ -89,12 +123,6 @@ export default function Login() {
     const list: Company[] = data?.companies || [];
     setCompanies(list);
     setLoadingCompanies(false);
-
-    // 👑 ADMIN ANUP
-    if (role === "anup_admin") {
-      setStep("select_company");
-      return;
-    }
 
     // 🏢 EMPRESA
     if (companyId) {
@@ -107,19 +135,14 @@ export default function Login() {
 
     // fallback
     setStep("select_company");
-  };
+  }, [handleSelectCompany, navigate]);
 
-  const handleSelectCompany = async (company: Company) => {
-    selectCompany(company);
-    setLoadingEmployees(true);
-    setStep("select_employee");
-
-    const { data } = await supabase.functions.invoke("manage-users", {
-      body: { action: "list_employees", company_id: company.id },
-    });
-    setEmployees(data?.employees || []);
-    setLoadingEmployees(false);
-  };
+  // After login, advance to company selection.
+  useEffect(() => {
+    if (session && !sessionIsAnupAdmin && step === "credentials") {
+      loadCompanies();
+    }
+  }, [session, sessionIsAnupAdmin, step, loadCompanies]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -127,12 +150,24 @@ export default function Login() {
       return;
     }
     setSigningIn(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      toast.error("❌ Email ou senha incorretos.");
+      toast.error("Email ou senha incorretos.");
     } else {
-      toast.success("✅ Login realizado!");
-      // useEffect will advance to company selection
+      const loggedRole = data.session?.user?.app_metadata?.role;
+      const loggedAsAnupAdmin = loggedRole === "anup_admin";
+
+      console.log("[Anup Login] login successful", {
+        email: data.session?.user?.email,
+        metadataRole: loggedRole,
+        isAnupAdmin: loggedAsAnupAdmin,
+        target: loggedAsAnupAdmin ? "/anup/dashboard" : "company-selection",
+      });
+
+      toast.success("Login realizado!");
+      if (loggedAsAnupAdmin) {
+        navigate("/anup/dashboard", { replace: true });
+      }
     }
     setSigningIn(false);
   };

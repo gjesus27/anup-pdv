@@ -13,6 +13,18 @@ function json(data: unknown, status = 200) {
   });
 }
 
+type CompanyJoinRow = {
+  companies: {
+    id: string;
+    name: string;
+    trade_name: string | null;
+    status: string;
+  } | null;
+  status: string;
+};
+
+const getErrorMessage = (err: unknown) => (err instanceof Error ? err.message : "Unexpected error");
+
 // Simple password hashing using SHA-256 with salt (no pgcrypto needed)
 async function hashPassword(password: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -135,7 +147,7 @@ Deno.serve(async (req) => {
         profile: profile || null,
         role: roleData?.role || null,
         is_anup_admin: isAnupAdmin,
-        company: companyUser ? (companyUser as any).companies : null,
+        company: companyUser ? (companyUser as CompanyJoinRow).companies : null,
         company_user_status: companyUser?.status || null,
       });
     }
@@ -150,7 +162,7 @@ Deno.serve(async (req) => {
           .select("companies(id, name, trade_name, status)")
           .eq("user_id", caller.id)
           .eq("status", "active");
-        const companies = (data || []).map((d: any) => d.companies).filter(Boolean);
+        const companies = ((data || []) as CompanyJoinRow[]).map((d) => d.companies).filter(Boolean);
         return json({ companies });
       }
     }
@@ -275,7 +287,7 @@ Deno.serve(async (req) => {
     }
 
     return json({ error: "Unknown action" }, 400);
-  } catch (err) {
-    return json({ error: err.message }, 500);
+  } catch (err: unknown) {
+    return json({ error: getErrorMessage(err) }, 500);
   }
 });

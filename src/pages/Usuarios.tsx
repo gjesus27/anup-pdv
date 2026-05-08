@@ -21,6 +21,10 @@ interface UserRow {
   email?: string;
 }
 
+type ManageUsersBody = Record<string, string | undefined>;
+
+const getErrorMessage = (err: unknown) => (err instanceof Error ? err.message : "Erro inesperado");
+
 const roleLabels: Record<string, string> = {
   admin: "Admin",
   manager: "Gerente",
@@ -79,7 +83,7 @@ export default function Usuarios() {
     fetchUsers();
   }, []);
 
-  const invokeManageUsers = async (body: any) => {
+  const invokeManageUsers = async (body: ManageUsersBody) => {
     const { data, error } = await supabase.functions.invoke("manage-users", { body });
     if (error) throw new Error(error.message);
     if (data?.error) throw new Error(data.error);
@@ -108,8 +112,8 @@ export default function Usuarios() {
       setCreateOpen(false);
       setNewName(""); setNewEmail(""); setNewPassword(""); setNewRole("cashier");
       fetchUsers();
-    } catch (err: any) {
-      toast.error(`❌ ${err.message}`);
+    } catch (err: unknown) {
+      toast.error(`Erro: ${getErrorMessage(err)}`);
     }
     setCreating(false);
   };
@@ -128,8 +132,8 @@ export default function Usuarios() {
       toast.success("✅ Usuário atualizado!");
       setEditOpen(false);
       fetchUsers();
-    } catch (err: any) {
-      toast.error(`❌ ${err.message}`);
+    } catch (err: unknown) {
+      toast.error(`Erro: ${getErrorMessage(err)}`);
     }
     setSaving(false);
   };
@@ -140,8 +144,8 @@ export default function Usuarios() {
       await invokeManageUsers({ action: "toggle_status", user_id: u.user_id, status: newStatus });
       toast.success("✅ Status atualizado!");
       fetchUsers();
-    } catch (err: any) {
-      toast.error(`❌ ${err.message}`);
+    } catch (err: unknown) {
+      toast.error(`Erro: ${getErrorMessage(err)}`);
     }
   };
 
@@ -151,8 +155,8 @@ export default function Usuarios() {
       await invokeManageUsers({ action: "delete", user_id: u.user_id });
       toast.warning("⚠️ Usuário removido.");
       fetchUsers();
-    } catch (err: any) {
-      toast.error(`❌ ${err.message}`);
+    } catch (err: unknown) {
+      toast.error(`Erro: ${getErrorMessage(err)}`);
     }
   };
 
@@ -167,8 +171,8 @@ export default function Usuarios() {
       toast.success("✅ Senha atualizada!");
       setPwOpen(false);
       setPwValue("");
-    } catch (err: any) {
-      toast.error(`❌ ${err.message}`);
+    } catch (err: unknown) {
+      toast.error(`Erro: ${getErrorMessage(err)}`);
     }
     setPwSaving(false);
   };

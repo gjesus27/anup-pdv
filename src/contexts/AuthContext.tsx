@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Session, User } from "@supabase/supabase-js";
+import type { AuthError, Session, User } from "@supabase/supabase-js";
 
 export type AppRole = "admin" | "manager" | "cashier" | "delivery_person";
 
@@ -42,11 +42,14 @@ interface AuthContextType {
   selectEmployee: (employee: Employee) => void;
   clearCompanySelection: () => void;
   // Auth actions
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const isSessionAnupAdmin = (session: Session | null) =>
+  session?.user?.app_metadata?.role === "anup_admin";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -70,22 +73,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch { return null; }
   });
 
-  const fetchContext = useCallback(async () => {
+  const clearTenantSelection = useCallback(() => {
+    setSelectedCompany(null);
+    setSelectedEmployee(null);
+    sessionStorage.removeItem("anup_company");
+    sessionStorage.removeItem("anup_employee");
+  }, []);
+
+  const fetchContext = useCallback(async (currentSession: Session | null) => {
+    const activeSession = currentSession;
+    const metadataRole = activeSession?.user?.app_metadata?.role;
+    const metadataIsAnupAdmin = isSessionAnupAdmin(activeSession);
+
     const { data, error } = await supabase.functions.invoke("manage-users", {
       body: { action: "get_context" },
     });
-    if (error || !data) return;
+    if (error || !data) {
+      setIsAnupAdmin(metadataIsAnupAdmin);
+      if (metadataIsAnupAdmin) clearTenantSelection();
+      console.log("[Anup Auth] context fallback", {
+        email: activeSession?.user?.email,
+        metadataRole,
+        isAnupAdmin: metadataIsAnupAdmin,
+        reason: error?.message || "empty context",
+      });
+      return;
+    }
 
     if (data.profile) setProfile(data.profile);
     if (data.role) setRole(data.role as AppRole);
-    setIsAnupAdmin(data.is_anup_admin === true);
+    const resolvedAnupAdmin = metadataIsAnupAdmin || data.is_anup_admin === true;
+    setIsAnupAdmin(resolvedAnupAdmin);
+
+    console.log("[Anup Auth] user context resolved", {
+      email: activeSession?.user?.email,
+      metadataRole,
+      edgeRole: data.role,
+      edgeIsAnupAdmin: data.is_anup_admin,
+      isAnupAdmin: resolvedAnupAdmin,
+      companyId: data.company?.id ?? null,
+    });
+
+    if (resolvedAnupAdmin) {
+      clearTenantSelection();
+      return;
+    }
 
     // If not admin and has a company, auto-select it
-    if (!data.is_anup_admin && data.company) {
+    if (data.company) {
       setSelectedCompany(data.company);
       sessionStorage.setItem("anup_company", JSON.stringify(data.company));
     }
-  }, []);
+  }, [clearTenantSelection]);
 
   useEffect(() => {
     // Set up listener FIRST
@@ -93,6 +132,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        const metadataIsAnupAdmin = isSessionAnupAdmin(session);
+        setIsAnupAdmin(metadataIsAnupAdmin);
+        console.log("[Anup Auth] auth state changed", {
+          event: _event,
+          email: session?.user?.email ?? null,
+          metadataRole: session?.user?.app_metadata?.role ?? null,
+          isAnupAdmin: metadataIsAnupAdmin,
+        });
+        if (metadataIsAnupAdmin) clearTenantSelection();
         if (!session?.user) {
           setProfile(null);
           setRole(null);
@@ -109,19 +157,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      const metadataIsAnupAdmin = isSessionAnupAdmin(session);
+      setIsAnupAdmin(metadataIsAnupAdmin);
+      if (metadataIsAnupAdmin) clearTenantSelection();
       if (session?.user) {
-        await fetchContext();
+        await fetchContext(session);
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchContext]);
+  }, [clearTenantSelection, fetchContext]);
 
   // Fetch context when session changes (sign in)
   useEffect(() => {
     if (session?.user && !profile) {
-      fetchContext();
+      fetchContext(session);
     }
   }, [session, profile, fetchContext]);
 

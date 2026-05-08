@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+const getErrorMessage = (err: unknown) => (err instanceof Error ? err.message : "Erro inesperado");
+
 export default function Setup() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -45,8 +47,8 @@ export default function Setup() {
 
       toast.success("✅ Admin criado! Faça login agora.");
       navigate("/login");
-    } catch (err: any) {
-      toast.error(`❌ ${err.message}`);
+    } catch (err: unknown) {
+      toast.error(`Erro: ${getErrorMessage(err)}`);
     }
     setCreating(false);
   };

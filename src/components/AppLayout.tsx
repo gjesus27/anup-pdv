@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 const mobileItems = companyMenuItems.slice(0, 5);
 
 export function AppLayout() {
-  const { session, loading, selectedCompany, selectedEmployee } = useAuth();
+  const { session, loading, isAnupAdmin, selectedCompany, selectedEmployee } = useAuth();
 
   if (loading) {
     return (
@@ -22,7 +22,11 @@ export function AppLayout() {
   }
 
   if (!session) return <Navigate to="/login" replace />;
-  if (!selectedCompany || !selectedEmployee) return <Navigate to="/login" replace />;
+  if (!isAnupAdmin && (!selectedCompany || !selectedEmployee)) return <Navigate to="/login" replace />;
+
+  const workspaceLabel = isAnupAdmin
+    ? "Anup Solutions"
+    : selectedCompany?.trade_name || selectedCompany?.name || "Empresa";
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,12 +47,12 @@ export function AppLayout() {
             </div>
             <div className="flex min-w-0 items-center gap-2 sm:hidden">
               <Building2 className="h-4 w-4 text-secondary" />
-              <span className="truncate text-sm font-bold text-primary">{selectedCompany.trade_name || selectedCompany.name}</span>
+              <span className="truncate text-sm font-bold text-primary">{workspaceLabel}</span>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <span className="hidden max-w-[220px] truncate rounded-lg bg-muted px-3 py-1.5 text-xs font-bold text-muted-foreground sm:block">
-              {selectedCompany.trade_name || selectedCompany.name}
+              {workspaceLabel}
             </span>
             <button className="relative text-muted-foreground transition hover:text-foreground" aria-label="Notificações">
               <Bell className="h-5 w-5" />

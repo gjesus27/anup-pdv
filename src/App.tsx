@@ -40,7 +40,9 @@ const App = () => (
             <Route path="/setup" element={<Setup />} />
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/anup" element={<AnupAdmin />} />
+              <Route path="/anup" element={<Navigate to="/anup/dashboard" replace />} />
+              <Route path="/anup/dashboard" element={<AnupAdmin />} />
+              <Route path="/admin/anup" element={<Navigate to="/anup/dashboard" replace />} />
               <Route path="/pdv" element={<PDV />} />
               <Route path="/caixa" element={<Caixa />} />
               <Route path="/comandas" element={<Comandas />} />
