@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VITE_BASE_PATH: /anup-pdv/
-      VITE_SUPABASE_URL: https://awdxnaveayhxarlzzric.supabase.co
+      VITE_SUPABASE_URL: https://acgnbsptaypukwfvvsqd.supabase.co
       VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_86wxKttbL5bOOHwb5upQWA_fXbobX5w
     steps:
       - name: Checkout
